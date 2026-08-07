@@ -1,0 +1,27 @@
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Data validation & settings
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# HTTP (async calls to Groq / OpenRouter)
+httpx==0.28.1
+
+# File upload handling
+python-multipart==0.0.20
+
+# Audio duration + format detection (pure Python, no ffmpeg needed)
+mutagen==1.47.0
+
+# Image validation
+Pillow==11.0.0
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+anyio[trio]==4.7.0
+
+# Secret scanning (pre-commit safety net)
+detect-secrets==1.5.0
