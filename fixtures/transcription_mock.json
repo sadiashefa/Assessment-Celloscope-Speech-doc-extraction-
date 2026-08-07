@@ -1,0 +1,30 @@
+{
+    "en": {
+        "transcript": "The patient's haemoglobin level is twelve point five grams per decilitre, which is below the normal reference range of thirteen to seventeen. The attending physician recommends a follow-up in two weeks.",
+        "detected_language": "en",
+        "duration_seconds": 11.8,
+        "provider": "mock",
+        "is_speech_detected": true
+    },
+    "bn": {
+        "transcript": "রোগীর হিমোগ্লোবিনের মাত্রা বারো দশমিক পাঁচ গ্রাম প্রতি ডেসিলিটার, যা স্বাভাবিক মানের নিচে। চিকিৎসক দুই সপ্তাহ পরে ফলো-আপের পরামর্শ দিয়েছেন।",
+        "detected_language": "bn",
+        "duration_seconds": 9.3,
+        "provider": "mock",
+        "is_speech_detected": true
+    },
+    "silence": {
+        "transcript": "",
+        "detected_language": null,
+        "duration_seconds": 3.0,
+        "provider": "mock",
+        "is_speech_detected": false
+    },
+    "noisy": {
+        "transcript": "There is some background noise making the signal difficult to interpret clearly.",
+        "detected_language": "en",
+        "duration_seconds": 7.5,
+        "provider": "mock",
+        "is_speech_detected": true
+    }
+}
