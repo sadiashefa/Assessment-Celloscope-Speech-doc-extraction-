@@ -1,0 +1,71 @@
+{
+    "lab_report": {
+        "is_lab_report": true,
+        "patient_name": "Rahim Uddin",
+        "age": "45",
+        "sex": "Male",
+        "report_date": "15/07/2026",
+        "lab_name": "Dhaka Diagnostic Centre",
+        "reference_no": "DDC-2026-00842",
+        "results": [
+            {
+                "test_name": "Haemoglobin",
+                "raw_value": "12.5",
+                "unit": "g/dL",
+                "reference_range": "13.0 - 17.0",
+                "flag": "L",
+                "raw_line": "Haemoglobin          12.5       g/dL        13.0-17.0       L"
+            },
+            {
+                "test_name": "White Blood Cell Count",
+                "raw_value": "7,200",
+                "unit": "cells/μL",
+                "reference_range": "4,000 - 11,000",
+                "flag": "",
+                "raw_line": "White Blood Cell Count   7,200   cells/μL   4,000-11,000"
+            },
+            {
+                "test_name": "Platelets",
+                "raw_value": "1.8 x 10^5",
+                "unit": "10^3/μL",
+                "reference_range": "150 - 400",
+                "flag": "",
+                "raw_line": "Platelets            1.8 x 10^5   10^3/μL     150-400"
+            },
+            {
+                "test_name": "Fasting Blood Glucose",
+                "raw_value": "<5.6",
+                "unit": "mmol/L",
+                "reference_range": "3.9 - 5.6",
+                "flag": "",
+                "raw_line": "Fasting Blood Glucose   <5.6    mmol/L      3.9-5.6"
+            },
+            {
+                "test_name": "Serum Creatinine",
+                "raw_value": "0.9",
+                "unit": "mg/dL",
+                "reference_range": "0.7 - 1.2",
+                "flag": "",
+                "raw_line": "Serum Creatinine      0.9        mg/dL       0.7-1.2"
+            },
+            {
+                "test_name": "ALT (SGPT)",
+                "raw_value": "42",
+                "unit": "IU/L",
+                "reference_range": "7 - 56",
+                "flag": "",
+                "raw_line": "ALT (SGPT)           42         IU/L        7-56"
+            }
+        ]
+    },
+    "not_a_report": {
+        "is_lab_report": false,
+        "patient_name": "",
+        "age": "",
+        "sex": "",
+        "report_date": "",
+        "lab_name": "",
+        "reference_no": "",
+        "results": []
+    }
+}
