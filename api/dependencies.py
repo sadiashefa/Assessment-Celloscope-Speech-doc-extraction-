@@ -16,11 +16,23 @@ from adapters.documents.openrouter import OpenRouterDocumentAdapter
 from adapters.transcription.groq import GroqTranscriptionAdapter
 from adapters.transcription.mock import MockTranscriptionAdapter
 from adapters.transcription.openai import OpenAITranscriptionAdapter
+from adapters.transcription.openrouter import OpenRouterTranscriptionAdapter
 from core.config import settings
 
 
 def get_transcription_adapter() -> TranscriptionAdapter:
     provider = settings.TRANSCRIPTION_PROVIDER
+
+    if provider == "openrouter":
+        if not settings.OPENROUTER_API_KEY:
+            raise ValueError(
+                "OPENROUTER_API_KEY must be set when TRANSCRIPTION_PROVIDER=openrouter. "
+                "Add it to your .env file."
+            )
+        return OpenRouterTranscriptionAdapter(
+            api_key=settings.OPENROUTER_API_KEY,
+            model=settings.OPENROUTER_TRANSCRIPTION_MODEL,
+        )
 
     if provider == "groq":
         if not settings.GROQ_API_KEY:

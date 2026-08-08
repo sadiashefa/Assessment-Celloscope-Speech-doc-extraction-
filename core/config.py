@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     )
 
     # Provider selection — safe to commit, not secrets
-    TRANSCRIPTION_PROVIDER: Literal["mock", "groq", "openai"] = "mock"
+    TRANSCRIPTION_PROVIDER: Literal["mock", "groq", "openai", "openrouter"] = "mock"
     DOCUMENT_PROVIDER: Literal["mock", "openrouter"] = "mock"
 
     # Secrets — default is always empty string, never a real key
@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
 
     # Model selection
-    OPENROUTER_MODEL: str = "google/gemini-flash-1.5"
+    OPENROUTER_MODEL: str = "google/gemini-flash-1.5"          # for document extraction
+    OPENROUTER_TRANSCRIPTION_MODEL: str = "openai/gpt-transcribe"  # for audio
 
     # Limits
     MAX_AUDIO_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB
