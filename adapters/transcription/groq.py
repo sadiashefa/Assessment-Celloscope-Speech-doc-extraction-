@@ -19,9 +19,11 @@ _GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 _MODEL = "whisper-large-v3-turbo"
 
 _LANGUAGE_MAP: dict[str, str] = {
-    "bn": "bengali",
-    "en": "english",
+    "bn": "bn",
+    "en": "en",
 }
+# Note: Groq Whisper accepts ISO 639-1 codes directly ("bn", "en"),
+# not full language names. Map is kept for clarity but passes codes unchanged.
 
 # Tokens Whisper emits for non-speech content
 _NON_SPEECH_TOKENS = {"[music]", "[noise]", "[silence]", "[blank_audio]", "(music)", "(noise)"}
