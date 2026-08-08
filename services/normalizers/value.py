@@ -46,9 +46,23 @@ class NormalizedValue:
 
 
 def _strip_thousands_comma(s: str) -> str:
-    """Remove thousands-separator commas: '12,500' → '12500'."""
-    # Only strip commas that are thousands separators (digit,digit{3})
-    return re.sub(r"(\d),(\d{3})", r"\1\2", s)
+    """
+    Remove thousands-separator commas.
+
+    Only strips commas that form a valid thousands-separated number:
+      '12,500'     → '12500'
+      '1,234,567'  → '1234567'
+      '12,500.50'  → '12500.50'
+    A bare decimal comma ('1,5') is NOT stripped here — that case is
+    handled separately as a European decimal separator.
+    """
+    # Integer thousands: 1–3 leading digits followed by one or more groups of ,ddd
+    if re.match(r"^\d{1,3}(,\d{3})+$", s):
+        return s.replace(",", "")
+    # Float with thousands separator: same but with a decimal part
+    if re.match(r"^\d{1,3}(,\d{3})+\.\d+$", s):
+        return s.replace(",", "")
+    return s
 
 
 def _parse_superscripts(s: str) -> str:
