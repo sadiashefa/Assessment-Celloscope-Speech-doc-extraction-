@@ -17,7 +17,7 @@ import re
 
 import httpx
 
-from adapters.base import DocumentAdapter, RawLabExtraction, RawResultRow
+from adapters.base import AdapterError, DocumentAdapter, RawLabExtraction, RawResultRow
 
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -111,9 +111,16 @@ class OpenRouterDocumentAdapter:
             "Content-Type": "application/json",
         }
 
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            response = await client.post(_OPENROUTER_URL, headers=headers, json=payload)
-            response.raise_for_status()
+        try:
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                response = await client.post(_OPENROUTER_URL, headers=headers, json=payload)
+                response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AdapterError(
+                f"OpenRouter API error {exc.response.status_code}: {exc.response.text}"
+            ) from exc
+        except httpx.RequestError as exc:
+            raise AdapterError(f"OpenRouter network error: {exc}") from exc
 
         content = response.json()["choices"][0]["message"]["content"]
         data = _extract_json(content)

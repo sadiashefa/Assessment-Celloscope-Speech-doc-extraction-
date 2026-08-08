@@ -9,9 +9,11 @@ language parameter (e.g. "bengali"), not ISO codes. We map "bn" → "bengali"
 and "en" → "english" before sending. "auto" omits the parameter entirely.
 """
 
+import mimetypes
+
 import httpx
 
-from adapters.base import TranscriptionAdapter, TranscriptionResult
+from adapters.base import AdapterError, TranscriptionAdapter, TranscriptionResult
 
 _GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 _MODEL = "whisper-large-v3-turbo"
@@ -53,16 +55,26 @@ class GroqTranscriptionAdapter:
         if language != "auto":
             data["language"] = _LANGUAGE_MAP.get(language, language)
 
-        files = {"file": (filename, audio_bytes)}
+        content_type, _ = mimetypes.guess_type(filename)
+        if not content_type:
+            content_type = "audio/mpeg"  # safe fallback
+        files = {"file": (filename, audio_bytes, content_type)}
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                _GROQ_URL,
-                headers=headers,
-                data=data,
-                files=files,
-            )
-            response.raise_for_status()
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    _GROQ_URL,
+                    headers=headers,
+                    data=data,
+                    files=files,
+                )
+                response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AdapterError(
+                f"Groq API error {exc.response.status_code}: {exc.response.text}"
+            ) from exc
+        except httpx.RequestError as exc:
+            raise AdapterError(f"Groq network error: {exc}") from exc
 
         payload = response.json()
         transcript: str = payload.get("text", "").strip()

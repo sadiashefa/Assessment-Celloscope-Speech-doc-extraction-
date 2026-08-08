@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from api.dependencies import get_document_adapter
 from api.schemas.documents import ExtractResponse, LabMeta, LabResult
 from api.schemas.transcription import ErrorDetail
-from adapters.base import DocumentAdapter
+from adapters.base import AdapterError, DocumentAdapter
 from services.document import DocumentService, DocumentValidationError, NotALabReportError
 
 router = APIRouter()
@@ -41,18 +41,17 @@ async def extract_document(
     except DocumentValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=ErrorDetail(
-                code="invalid_image",
-                message=str(exc),
-            ).model_dump(),
+            detail=ErrorDetail(code="invalid_image", message=str(exc)).model_dump(),
         )
     except NotALabReportError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=ErrorDetail(
-                code="not_a_lab_report",
-                message=str(exc),
-            ).model_dump(),
+            detail=ErrorDetail(code="not_a_lab_report", message=str(exc)).model_dump(),
+        )
+    except AdapterError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=ErrorDetail(code="provider_error", message=str(exc)).model_dump(),
         )
 
     return ExtractResponse(

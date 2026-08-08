@@ -10,6 +10,14 @@ from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 
+class AdapterError(Exception):
+    """
+    Raised by any adapter when the upstream provider returns an error.
+    Wraps the original exception so the API layer can catch it without
+    importing httpx or any provider SDK.
+    """
+
+
 @dataclass
 class TranscriptionResult:
     """Returned by every TranscriptionAdapter implementation."""

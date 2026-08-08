@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
 
     # Model selection
-    OPENROUTER_MODEL: str = "google/gemini-2.0-flash-001"
+    OPENROUTER_MODEL: str = "google/gemini-flash-1.5"
 
     # Limits
     MAX_AUDIO_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB

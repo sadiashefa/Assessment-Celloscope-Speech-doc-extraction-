@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 
 from api.dependencies import get_transcription_adapter
 from api.schemas.transcription import ErrorDetail, TranscribeResponse
-from adapters.base import TranscriptionAdapter
+from adapters.base import AdapterError, TranscriptionAdapter
 from core.config import settings
 from services.transcription import AudioValidationError, TranscriptionService
 
@@ -75,10 +75,12 @@ async def transcribe(
     except AudioValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=ErrorDetail(
-                code="invalid_audio",
-                message=str(exc),
-            ).model_dump(),
+            detail=ErrorDetail(code="invalid_audio", message=str(exc)).model_dump(),
+        )
+    except AdapterError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=ErrorDetail(code="provider_error", message=str(exc)).model_dump(),
         )
 
     return TranscribeResponse(
