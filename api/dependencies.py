@@ -16,7 +16,7 @@ from adapters.documents.openrouter import OpenRouterDocumentAdapter
 from adapters.transcription.groq import GroqTranscriptionAdapter
 from adapters.transcription.mock import MockTranscriptionAdapter
 from adapters.transcription.openai import OpenAITranscriptionAdapter
-from adapters.transcription.openrouter import OpenRouterTranscriptionAdapter
+from adapters.transcription.openrouter import GeminiTranscriptionAdapter
 from core.config import settings
 
 
@@ -29,7 +29,7 @@ def get_transcription_adapter() -> TranscriptionAdapter:
                 "OPENROUTER_API_KEY must be set when TRANSCRIPTION_PROVIDER=openrouter. "
                 "Add it to your .env file."
             )
-        return OpenRouterTranscriptionAdapter(
+        return GeminiTranscriptionAdapter(
             api_key=settings.OPENROUTER_API_KEY,
             model=settings.OPENROUTER_TRANSCRIPTION_MODEL,
         )

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # Model selection
     OPENROUTER_MODEL: str = "google/gemini-flash-1.5"          # for document extraction
-    OPENROUTER_TRANSCRIPTION_MODEL: str = "openai/gpt-transcribe"  # for audio
+    OPENROUTER_TRANSCRIPTION_MODEL: str = "google/gemini-2.5-flash"  # for audio
 
     # Limits
     MAX_AUDIO_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB
