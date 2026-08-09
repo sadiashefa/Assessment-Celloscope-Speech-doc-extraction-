@@ -4,11 +4,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Provider selection — mock by default, no credentials required
-      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER:-mock}
-      DOCUMENT_PROVIDER: ${DOCUMENT_PROVIDER:-mock}
-      # Secrets — populated from .env file when running real providers
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Single provider switch — mock by default, no credentials required
+      PROVIDER: ${PROVIDER:-mock}
+      # Secret — only needed when PROVIDER=openrouter
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-google/gemini-2.0-flash-001}
+      # Model names
+      TRANSCRIPTION_PROVIDER_MODEL: ${TRANSCRIPTION_PROVIDER_MODEL:-google/gemini-2.5-flash}
+      DOCUMENT_EXTRACTION_PROVIDER_MODEL: ${DOCUMENT_EXTRACTION_PROVIDER_MODEL:-google/gemma-4-31b-it}

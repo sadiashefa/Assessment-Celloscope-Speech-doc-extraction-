@@ -24,13 +24,12 @@ Service starts at `http://localhost:8000`. Both endpoints return pre-recorded fi
 cp .env.example .env
 # Edit .env:
 #
-#   TRANSCRIPTION_PROVIDER=openrouter      # or: groq | openai
-#   DOCUMENT_PROVIDER=openrouter
+#   PROVIDER=openrouter
 #
 #   OPENROUTER_API_KEY=<your key from openrouter.ai>
 #
-#   OPENROUTER_TRANSCRIPTION_MODEL=google/gemini-2.5-flash   # for /transcribe
-#   OPENROUTER_MODEL=google/gemma-4-31b-it                   # for /documents/extract
+#   TRANSCRIPTION_PROVIDER_MODEL=google/gemini-2.5-flash   # for /transcribe
+#   DOCUMENT_EXTRACTION_PROVIDER_MODEL=google/gemma-4-31b-it   # for /documents/extract
 #
 docker compose up
 ```

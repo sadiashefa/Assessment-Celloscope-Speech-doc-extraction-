@@ -10,18 +10,17 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
 
-    # Provider selection — safe to commit, not secrets
-    TRANSCRIPTION_PROVIDER: Literal["mock", "groq", "openai", "openrouter"] = "mock"
-    DOCUMENT_PROVIDER: Literal["mock", "openrouter"] = "mock"
+    # Single provider switch for both endpoints
+    PROVIDER: Literal["mock", "openrouter"] = "mock"
 
-    # Secrets — default is always empty string, never a real key
-    GROQ_API_KEY: str = ""
-    OPENAI_API_KEY: str = ""
+    # Secret — only needed when PROVIDER=openrouter
     OPENROUTER_API_KEY: str = ""
 
-    # Model selection
-    OPENROUTER_MODEL: str = "google/gemma-4-31b-it"          # for document extraction
-    OPENROUTER_TRANSCRIPTION_MODEL: str = "google/gemini-2.5-flash"  # for audio
+    # Model used for POST /api/v1/transcribe
+    TRANSCRIPTION_PROVIDER_MODEL: str = "google/gemini-2.5-flash"
+
+    # Model used for POST /api/v1/documents/extract
+    DOCUMENT_EXTRACTION_PROVIDER_MODEL: str = "google/gemma-4-31b-it"
 
     # Limits
     MAX_AUDIO_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB
