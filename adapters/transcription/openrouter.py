@@ -34,60 +34,68 @@ from adapters.base import AdapterError, TranscriptionAdapter, TranscriptionResul
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 _SYSTEM_PROMPT = """\
-You are a precise audio transcription engine.
+You are a strict audio transcription engine. You must follow these rules exactly.
 
-Your only job is to listen to audio and return a JSON object — no markdown, \
-no explanation, nothing else.
+══════════════════════════════════════════════
+STEP 1 — SILENCE CHECK (do this before anything else)
+══════════════════════════════════════════════
+Listen carefully. Ask yourself: "Do I hear actual human spoken words?"
 
-CRITICAL RULE — check this FIRST before anything else:
-If the audio contains ONLY silence, background noise, static, hiss, music, \
-ambient sounds, or any non-human-speech content, you MUST return:
-{"transcript": "", "detected_language": null, "is_speech_detected": false}
-Do NOT transcribe noise, music, or silence as words. Do NOT hallucinate words \
-that are not present in the audio.
+These are NOT speech — always return is_speech_detected=false for these:
+  • Complete silence / inaudible content
+  • Background hiss, static, electrical noise
+  • Fan noise, wind, ambient room tone
+  • Music without vocals
+  • White noise or pink noise
+  • A person breathing but not speaking
+  • Any audio where no words can be clearly distinguished
 
-Only if there is clear, intelligible human speech in the audio, transcribe it.
+Rule: If in doubt, return is_speech_detected=false.
+We prefer missing a quiet word over inventing words that were not spoken.
+NEVER generate or guess words. NEVER produce Bengali or any other text
+unless you can clearly hear those exact words in the audio.
 
-Output schema (return exactly this, no extra keys):
+══════════════════════════════════════════════
+STEP 2 — TRANSCRIPTION (only if step 1 confirms speech)
+══════════════════════════════════════════════
+Transcribe the exact words spoken, verbatim.
+- Bengali speech → Bengali Unicode script
+- English speech → English text
+- Never paraphrase, summarise, or add words
+
+══════════════════════════════════════════════
+OUTPUT FORMAT
+══════════════════════════════════════════════
+Return ONLY this JSON — no markdown fences, no explanation:
 {
-  "transcript": "<the exact spoken words verbatim, empty string if no speech>",
+  "heard": "<one sentence: what you actually hear in this audio>",
+  "transcript": "<exact spoken words, or empty string if no speech>",
   "detected_language": "<ISO 639-1 code e.g. en or bn, or null if no speech>",
   "is_speech_detected": <true or false>
 }
-
-Additional rules:
-- transcript must contain the exact words spoken — do not paraphrase or summarise.
-- For Bengali audio, transcribe in Bengali Unicode script (e.g. রোগীর হিমোগ্লোবিন...).
-- For English audio, transcribe in English.
-- Never guess words you cannot hear. If a word is inaudible, omit it.
-- detected_language is the language actually spoken, not the language requested.
+The "heard" field forces you to describe the audio before deciding — use it honestly.
 """
 
 
 def _language_instruction(language: str) -> str:
-    """
-    Build a language hint for the model.
-    Language detection always happens automatically — the hint only helps
-    the model decide which script to use for transcription output.
-    """
+    """Build a language hint. Silence check always takes priority over the hint."""
     if language == "bn":
         return (
-            "The user indicated Bengali (বাংলা) audio. "
-            "First verify there is actual speech — if not, return is_speech_detected=false. "
-            "If speech is present, transcribe in Bengali Unicode script."
+            "Language hint: Bengali (বাংলা) is expected IF speech is present. "
+            "But run the silence check first — if there are no spoken words, "
+            "set is_speech_detected=false regardless of this hint. "
+            "Do NOT produce Bengali text just because this hint says Bengali."
         )
     if language == "en":
         return (
-            "The user indicated English audio. "
-            "First verify there is actual speech — if not, return is_speech_detected=false. "
-            "If speech is present, transcribe in English."
+            "Language hint: English is expected IF speech is present. "
+            "But run the silence check first — if there are no spoken words, "
+            "set is_speech_detected=false regardless of this hint."
         )
-    # auto (default)
     return (
-        "Auto-detect the language from the audio. "
-        "First check for the presence of speech. "
-        "If no speech (silence, noise, music): return is_speech_detected=false. "
-        "If speech is present: identify the language and transcribe accurately."
+        "No language hint. Auto-detect from audio content. "
+        "Run the silence check first. If no words are spoken, "
+        "set is_speech_detected=false and leave transcript empty."
     )
 
 
@@ -95,7 +103,10 @@ def _extract_json(text: str) -> dict:
     """Strip markdown fences and parse JSON from model response."""
     text = re.sub(r"^```(?:json)?\s*", "", text.strip(), flags=re.IGNORECASE)
     text = re.sub(r"\s*```$", "", text.strip())
-    return json.loads(text)
+    data = json.loads(text)
+    # "heard" is a reasoning field — strip it before returning to the caller
+    data.pop("heard", None)
+    return data
 
 
 def _m4a_duration(data: bytes) -> float | None:
