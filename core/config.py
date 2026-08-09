@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
 
     # Model selection
-    OPENROUTER_MODEL: str = "google/gemini-flash-1.5"          # for document extraction
+    OPENROUTER_MODEL: str = "google/gemini-2.5-pro"          # for document extraction
     OPENROUTER_TRANSCRIPTION_MODEL: str = "google/gemini-2.5-flash"  # for audio
 
     # Limits
