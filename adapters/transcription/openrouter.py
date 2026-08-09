@@ -16,7 +16,9 @@ Duration is computed locally via mutagen (no extra API call needed).
 import base64
 import io
 import json
+import os
 import re
+import tempfile
 import wave
 
 import httpx
@@ -125,12 +127,21 @@ def _get_duration(audio_bytes: bytes, filename: str = "") -> float:
         except Exception:
             pass
 
-    # M4A / MP4 / AAC (most phones record in M4A)
+    # M4A / MP4 / AAC — mutagen.mp4.MP4 fails with raw BytesIO (no name attr).
+    # Write to a temp file with the correct extension so mutagen can parse it reliably.
     if ext in ("m4a", "m4b", "mp4", "aac"):
+        fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}")
         try:
-            return float(mutagen.mp4.MP4(io.BytesIO(audio_bytes)).info.length)
+            with os.fdopen(fd, "wb") as f:
+                f.write(audio_bytes)
+            return float(mutagen.mp4.MP4(tmp_path).info.length)
         except Exception:
             pass
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
     # OGG
     if ext == "ogg":
