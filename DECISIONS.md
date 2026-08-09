@@ -54,14 +54,16 @@ The final approach uses a format-specific dispatch:
 
 ---
 
-## 5. Two-layer silence detection: local RMS pre-check + prompt chain-of-thought
+## 5. Three-layer silence detection: RMS pre-check + prompt chain-of-thought + no language hint in API payload
 
-**Chose**: (a) RMS amplitude check on WAV bytes before any API call; (b) a structured prompt with a mandatory `heard` field that forces the model to describe audio content before deciding `is_speech_detected`
-**Rejected**: Relying on a single instruction in the system prompt; VAD (Voice Activity Detection) libraries
+**Chose**: (a) Local RMS amplitude check for WAV; (b) structured `heard` field for chain-of-thought reasoning; (c) completely removing the user-supplied `language` hint from the Gemini API payload
+**Rejected**: VAD libraries; passing language hints alongside audio; relying on a single prompt instruction
 
-**Layer 1 — local RMS pre-check (WAV only):** During testing, Gemini 2.5 Flash hallucinated Bengali text when given a silent WAV file with `language=bn` as a hint — the language instruction overrode the silence rule. A local energy check on WAV bytes (RMS < 50 → silence) is deterministic and costs nothing: the response is returned in milliseconds with no API call. This covers the common case of programmatically generated silence files.
+**Layer 1 — local RMS pre-check (WAV only):** A local energy check on WAV bytes (RMS < 50 → silence) is deterministic and costs zero API credits. Silent WAV files are caught before any network call and returned immediately.
 
-**Layer 2 — prompt chain-of-thought (all formats):** For non-WAV silence (MP3, M4A from phones), the audio reaches the model. A simple imperative rule (“return false for silence”) proved insufficient — the model ignored it when a language hint was present. The redesigned prompt adds a `heard` field to the required JSON output: the model must first describe what it actually hears (e.g. `"silence with faint background hiss"`) before setting `is_speech_detected`. This chain-of-thought step prevents logical inconsistency — if `heard` describes silence, the model cannot justify `is_speech_detected: true` without contradicting itself. An explicit tie-breaking rule (`When in doubt → false`) further biases output toward caution over hallucination.
+**Layer 2 — prompt chain-of-thought (all formats):** The system prompt requires the model to populate a `heard` field before deciding `is_speech_detected`. The model must first write what it actually hears (e.g. `"silence with faint hiss"`), which prevents logical inconsistency — if `heard` describes silence, the model cannot justify `is_speech_detected: true` without contradicting itself. An explicit tie-breaking rule (`When in doubt → false`) biases output toward caution.
 
-VAD libraries (e.g. Silero VAD, WebRTC VAD) were considered but rejected: they add non-trivial dependencies, require model downloads or native binaries, and would block the clean-clone `docker compose up` requirement.
+**Layer 3 — language hint removed from API payload:** Despite layers 1 and 2, Gemini 2.5 Flash continued hallucinating Bengali text on silent MP3/M4A files when `language=bn` appeared in the user message. The model treated the language token as a content expectation rather than a metadata hint and generated plausible Bengali text from silence. The root cause is a fundamental LLM behaviour: language tokens activate language-specific output pathways regardless of input content. The fix is to send no language hint to the model at all — Gemini detects language natively and reliably from audio content. The user-supplied `language` parameter is still accepted by the API (per the assessment spec) but is used only as a `detected_language` fallback in the response, never as a prompt signal. This eliminated the hallucination entirely.
+
+VAD libraries (e.g. Silero VAD, WebRTC VAD) were rejected: they require model downloads or native binaries and would break the `docker compose up` clean-clone requirement.
 

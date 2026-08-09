@@ -45,11 +45,12 @@ docker compose up
 | Field | Type | Description |
 |---|---|---|
 | `file` | multipart | Audio file (mp3, wav, ogg, flac, m4a, webm — max 25 MB) |
-| `language` | form | **Optional.** `bn`, `en`, or `auto`. Default: `auto`. Model always auto-detects regardless; this is a transcription hint only. |
+| `language` | form | **Optional.** `bn`, `en`, or `auto`. Default: `auto`. Accepted per spec but **not sent to the model** — Gemini detects language natively. Used only as a fallback for `detected_language` in the response. |
 
-**Silence handling (two layers):**
-- **WAV files:** RMS energy check runs locally before any API call. If RMS < 50 (pure silence), returns `is_speech_detected: false` instantly with no network request.
-- **All formats:** The model prompt uses a mandatory `heard` field (chain-of-thought) — the model must first describe what it hears before setting `is_speech_detected`. This prevents hallucination when a language hint is present. Rule: *"if in doubt → false"*.
+**Silence handling (three layers):**
+- **WAV files:** Local RMS energy check before any API call. RMS < 50 → `is_speech_detected: false` instantly, no network request.
+- **All formats:** Prompt uses a mandatory `heard` field (chain-of-thought). Model must describe audio content before setting `is_speech_detected`.
+- **No language hint sent to model:** The `language` param is never included in the API payload — it caused hallucination on silent audio. Model detects language freely from audio content.
 
 **Response**
 ```json
