@@ -22,6 +22,9 @@ import wave
 import httpx
 import mutagen
 import mutagen.mp3
+import mutagen.mp4
+import mutagen.ogg
+import mutagen.flac
 
 from adapters.base import AdapterError, TranscriptionAdapter, TranscriptionResult
 
@@ -96,15 +99,18 @@ def _get_duration(audio_bytes: bytes, filename: str = "") -> float:
     """
     Compute audio duration in seconds.
 
-    Strategy:
-    1. WAV files  → Python stdlib wave (always reliable, no format guessing)
-    2. MP3 files  → mutagen.mp3.MP3 (reliable for CBR/VBR)
-    3. Others     → mutagen.File with filename hint
-    Fallback      → 0.0 (never raise)
+    Uses format-specific readers in order of reliability:
+    WAV  → stdlib wave (always reliable)
+    MP3  → mutagen.mp3.MP3
+    M4A/MP4/AAC → mutagen.mp4.MP4
+    OGG  → mutagen.ogg
+    FLAC → mutagen.flac.FLAC
+    Other → mutagen.File with filename hint
+    Fallback → 0.0
     """
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
-    # WAV: use stdlib — works 100% from raw bytes with no filename
+    # WAV: stdlib — works 100% from raw bytes
     if ext == "wav" or audio_bytes[:4] == b"RIFF":
         try:
             with wave.open(io.BytesIO(audio_bytes)) as wf:
@@ -112,17 +118,37 @@ def _get_duration(audio_bytes: bytes, filename: str = "") -> float:
         except Exception:
             pass
 
-    # MP3: use mutagen's dedicated MP3 reader
+    # MP3
     if ext in ("mp3", "mpeg", "mpga"):
         try:
-            tag = mutagen.mp3.MP3(io.BytesIO(audio_bytes))
-            return float(tag.info.length)
+            return float(mutagen.mp3.MP3(io.BytesIO(audio_bytes)).info.length)
         except Exception:
             pass
 
-    # Everything else: let mutagen guess from content + filename hint
+    # M4A / MP4 / AAC (most phones record in M4A)
+    if ext in ("m4a", "m4b", "mp4", "aac"):
+        try:
+            return float(mutagen.mp4.MP4(io.BytesIO(audio_bytes)).info.length)
+        except Exception:
+            pass
+
+    # OGG
+    if ext == "ogg":
+        try:
+            return float(mutagen.ogg.OggFileType(io.BytesIO(audio_bytes)).info.length)
+        except Exception:
+            pass
+
+    # FLAC
+    if ext == "flac":
+        try:
+            return float(mutagen.flac.FLAC(io.BytesIO(audio_bytes)).info.length)
+        except Exception:
+            pass
+
+    # Generic fallback — try sniffing from content
     try:
-        audio = mutagen.File(io.BytesIO(audio_bytes), filename=filename or None)
+        audio = mutagen.File(io.BytesIO(audio_bytes))
         if audio and hasattr(audio.info, "length"):
             return float(audio.info.length)
     except Exception:
