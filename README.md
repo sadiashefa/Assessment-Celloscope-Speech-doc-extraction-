@@ -1,4 +1,4 @@
-# Celloscope Assessment: Speech & Document Extraction
+# Celloscope Assessment : Speech & Document Extraction
 
 A FastAPI service with two endpoints:
 - **Transcribe** audio in Bengali, English, or any language (OpenRouter + Gemini 2.5 Flash)
