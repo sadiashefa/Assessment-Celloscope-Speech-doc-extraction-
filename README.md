@@ -1,10 +1,10 @@
 # Speech & Document Extraction
 
 An AI service with two capabilities:
-- **Transcribe** audio in Bengali and English (Groq Whisper / OpenAI Whisper)
-- **Extract structured data** from photographed medical lab reports (OpenRouter + Gemini 2.0 Flash)
+- **Transcribe** audio in Bengali, English, or any language (OpenRouter + Gemini 2.5 Flash — multimodal auto-detection)
+- **Extract structured data** from photographed medical lab reports (OpenRouter + Gemma 4 31B IT)
 
----
+Both endpoints share a single `OPENROUTER_API_KEY`.
 
 ## Quick Start
 
@@ -22,11 +22,10 @@ The service starts on `http://localhost:8000`. Both endpoints respond immediatel
 
 ```bash
 cp .env.example .env
-# Edit .env:
-#   TRANSCRIPTION_PROVIDER=groq       (or openai)
+# Edit .env — only ONE key needed for both endpoints:
+#   TRANSCRIPTION_PROVIDER=openrouter
 #   DOCUMENT_PROVIDER=openrouter
-#   GROQ_API_KEY=<your key from console.groq.com>
-#   OPENROUTER_API_KEY=<your key>
+#   OPENROUTER_API_KEY=<your key from openrouter.ai>
 docker compose up
 ```
 
@@ -39,20 +38,22 @@ docker compose up
 | Field | Type | Description |
 |---|---|---|
 | `file` | multipart | Audio file (mp3, wav, ogg, flac, m4a, webm — max 25 MB) |
-| `language` | form | `bn`, `en`, or `auto` |
+| `language` | form | **Optional.** `bn`, `en`, or `auto`. Default: `auto`. Model always auto-detects regardless; this is a transcription hint only. |
+
+**Silence pre-check (WAV files):** If the audio RMS energy is below threshold, the endpoint returns `is_speech_detected: false` immediately without an API call — prevents LLM hallucination on silent files.
 
 **Response**
 ```json
 {
-  "transcript": "The patient's haemoglobin...",
-  "detected_language": "en",
-  "duration_seconds": 11.8,
-  "provider": "groq",
+  "transcript": "রোগীর হিমোগ্লোবিনের মাত্রা বারো দশমিক পাঁচ গ্রাম...",
+  "detected_language": "bn",
+  "duration_seconds": 17.69,
+  "provider": "openrouter-gemini",
   "is_speech_detected": true
 }
 ```
 
-Silence or ambient noise → `is_speech_detected: false`, `transcript: ""`
+Silence or ambient noise → `is_speech_detected: false`, `transcript: ""`, `provider: "local-silence-check"`
 
 ---
 
@@ -98,24 +99,25 @@ api/          HTTP routing, request/response schemas, validation
   └── FastAPI types (UploadFile, HTTPException) stay here only
 
 services/     Business logic — no FastAPI imports, no network calls
-  ├── TranscriptionService — validates size/format, calls adapter
-  ├── DocumentService      — validates image, calls adapter, runs normalisers
+  ├── TranscriptionService — size/format validation, WAV silence pre-check, calls adapter
+  ├── DocumentService      — image validation, calls adapter, runs normalisers
   └── normalizers/
         ├── value.py       — canonical numeric value parsing
         └── unit.py        — unit and date normalisation
 
-adapters/     Provider integration — the only place httpx/SDK calls live
-  ├── base.py                    Protocol interfaces + result dataclasses
+adapters/     Provider integration — the only place httpx calls live
+  ├── base.py                    Protocol interfaces + result dataclasses + AdapterError
   ├── transcription/
-  │     ├── mock.py              replays fixture from disk
-  │     ├── groq.py              Groq Whisper API
-  │     └── openai.py            OpenAI Whisper API (fallback)
+  │     ├── mock.py              replays fixture from disk (default)
+  │     ├── openrouter.py        OpenRouter + Gemini 2.5 Flash (multimodal, primary real adapter)
+  │     ├── groq.py              Groq Whisper API (alternative, TRANSCRIPTION_PROVIDER=groq)
+  │     └── openai.py            OpenAI Whisper API (alternative, TRANSCRIPTION_PROVIDER=openai)
   └── documents/
-        ├── mock.py              replays fixture from disk
-        └── openrouter.py        OpenRouter vision model
+        ├── mock.py              replays fixture from disk (default)
+        └── openrouter.py        OpenRouter + Gemma 4 31B IT (vision, primary real adapter)
 ```
 
-The layer separation is enforced by a mechanical test (`tests/unit/test_layer_separation.py`) that walks the source tree and asserts no FastAPI imports leak into `services/` and no provider SDKs leak into `api/`.
+Layer separation is enforced by a mechanical test (`tests/unit/test_layer_separation.py`) that asserts no FastAPI imports leak into `services/` and no provider SDKs leak into `api/`.
 
 ---
 
