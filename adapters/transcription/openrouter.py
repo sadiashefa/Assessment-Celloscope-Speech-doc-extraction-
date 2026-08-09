@@ -17,9 +17,11 @@ import base64
 import io
 import json
 import re
+import wave
 
 import httpx
 import mutagen
+import mutagen.mp3
 
 from adapters.base import AdapterError, TranscriptionAdapter, TranscriptionResult
 
@@ -90,11 +92,42 @@ def _extract_json(text: str) -> dict:
     return json.loads(text)
 
 
-def _get_duration(audio_bytes: bytes) -> float:
-    """Compute audio duration locally via mutagen — no extra API call."""
-    audio = mutagen.File(io.BytesIO(audio_bytes))
-    if audio and hasattr(audio.info, "length"):
-        return float(audio.info.length)
+def _get_duration(audio_bytes: bytes, filename: str = "") -> float:
+    """
+    Compute audio duration in seconds.
+
+    Strategy:
+    1. WAV files  → Python stdlib wave (always reliable, no format guessing)
+    2. MP3 files  → mutagen.mp3.MP3 (reliable for CBR/VBR)
+    3. Others     → mutagen.File with filename hint
+    Fallback      → 0.0 (never raise)
+    """
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+    # WAV: use stdlib — works 100% from raw bytes with no filename
+    if ext == "wav" or audio_bytes[:4] == b"RIFF":
+        try:
+            with wave.open(io.BytesIO(audio_bytes)) as wf:
+                return wf.getnframes() / wf.getframerate()
+        except Exception:
+            pass
+
+    # MP3: use mutagen's dedicated MP3 reader
+    if ext in ("mp3", "mpeg", "mpga"):
+        try:
+            tag = mutagen.mp3.MP3(io.BytesIO(audio_bytes))
+            return float(tag.info.length)
+        except Exception:
+            pass
+
+    # Everything else: let mutagen guess from content + filename hint
+    try:
+        audio = mutagen.File(io.BytesIO(audio_bytes), filename=filename or None)
+        if audio and hasattr(audio.info, "length"):
+            return float(audio.info.length)
+    except Exception:
+        pass
+
     return 0.0
 
 
@@ -183,7 +216,7 @@ class GeminiTranscriptionAdapter:
         return TranscriptionResult(
             transcript=transcript,
             detected_language=detected_language,
-            duration_seconds=_get_duration(audio_bytes),
+            duration_seconds=_get_duration(audio_bytes, filename),
             provider="openrouter-gemini",
             is_speech_detected=is_speech,
         )

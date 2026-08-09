@@ -98,10 +98,13 @@ class TranscriptionService:
         if filename.lower().endswith(".wav"):
             rms = _wav_rms(audio_bytes)
             if rms is not None and rms < _SILENCE_RMS_THRESHOLD:
-                duration = 0.0
-                audio = mutagen.File(io.BytesIO(audio_bytes))
-                if audio and hasattr(audio.info, "length"):
-                    duration = float(audio.info.length)
+                # For WAV we already have the frame count — compute duration directly
+                try:
+                    buf = io.BytesIO(audio_bytes)
+                    with wave.open(buf) as wf:
+                        duration = wf.getnframes() / wf.getframerate()
+                except Exception:
+                    duration = 0.0
                 return TranscriptionResult(
                     transcript="",
                     detected_language=None,
