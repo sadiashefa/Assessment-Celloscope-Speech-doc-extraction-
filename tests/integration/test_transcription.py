@@ -107,13 +107,17 @@ def test_transcribe_invalid_language_returns_422(client):
     assert detail["code"] == "invalid_language"
 
 
-def test_transcribe_missing_language_returns_422(client):
+def test_transcribe_missing_language_defaults_to_auto(client):
+    """language field is optional — omitting it uses 'auto' and succeeds."""
     wav = _make_wav_bytes(silent=False)
     response = client.post(
         "/api/v1/transcribe",
         files={"file": ("test.wav", wav, "audio/wav")},
+        # no language field
     )
-    assert response.status_code == 422
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_speech_detected"] is True
 
 
 def test_transcribe_oversized_file_returns_422(client):

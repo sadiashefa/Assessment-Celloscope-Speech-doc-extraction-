@@ -57,24 +57,29 @@ Additional rules:
 
 
 def _language_instruction(language: str) -> str:
-    """Return a language hint that explicitly defers to the silence rule."""
+    """
+    Build a language hint for the model.
+    Language detection always happens automatically — the hint only helps
+    the model decide which script to use for transcription output.
+    """
     if language == "bn":
         return (
-            "Language hint (only applies if speech is present): "
-            "the speaker is using Bengali (বাংলা). "
-            "If there IS speech, transcribe every word in Bengali Unicode script. "
-            "If there is NO speech (silence/noise), still return is_speech_detected=false."
+            "The user indicated Bengali (বাংলা) audio. "
+            "First verify there is actual speech — if not, return is_speech_detected=false. "
+            "If speech is present, transcribe in Bengali Unicode script."
         )
     if language == "en":
         return (
-            "Language hint (only applies if speech is present): "
-            "the speaker is using English. "
-            "If there IS speech, transcribe in English. "
-            "If there is NO speech (silence/noise), still return is_speech_detected=false."
+            "The user indicated English audio. "
+            "First verify there is actual speech — if not, return is_speech_detected=false. "
+            "If speech is present, transcribe in English."
         )
+    # auto (default)
     return (
-        "Language hint: detect the language automatically from the audio content. "
-        "If there is no intelligible speech, return is_speech_detected=false."
+        "Auto-detect the language from the audio. "
+        "First check for the presence of speech. "
+        "If no speech (silence, noise, music): return is_speech_detected=false. "
+        "If speech is present: identify the language and transcribe accurately."
     )
 
 

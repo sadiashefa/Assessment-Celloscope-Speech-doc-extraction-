@@ -3,7 +3,10 @@ POST /api/v1/transcribe
 
 Accepts a multipart upload with:
   file     — audio file (mp3, wav, ogg, flac, m4a, webm)
-  language — "bn" | "en" | "auto"
+  language — optional: "bn" | "en" | "auto" (default: "auto")
+             The model always auto-detects language; this field is used as a
+             transcription hint only. detected_language in the response reflects
+             what was actually spoken.
 
 Returns TranscribeResponse on success.
 Returns 422 with structured ErrorDetail for validation failures — never a stack trace.
@@ -33,8 +36,8 @@ _VALID_LANGUAGES = {"bn", "en", "auto"}
 )
 async def transcribe(
     file: UploadFile,
-    language: Annotated[str, Form()],
     adapter: Annotated[TranscriptionAdapter, Depends(get_transcription_adapter)],
+    language: Annotated[str, Form()] = "auto",
 ) -> TranscribeResponse:
     # Validate language field before reading bytes
     if language not in _VALID_LANGUAGES:
