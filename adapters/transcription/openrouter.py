@@ -18,6 +18,7 @@ import io
 import json
 import os
 import re
+import struct
 import tempfile
 import wave
 
@@ -97,6 +98,60 @@ def _extract_json(text: str) -> dict:
     return json.loads(text)
 
 
+def _m4a_duration(data: bytes) -> float | None:
+    """
+    Parse M4A/MP4 duration in pure Python by reading the ISO Base Media
+    File Format (ISOBMFF) box structure.
+
+    Scans top-level boxes for 'moov', then scans moov for 'mvhd'.
+    The mvhd box contains timescale + duration — no external library needed.
+    Works regardless of whether moov is at the start or end of the file.
+    """
+    def _read_boxes(buf: bytes):
+        """Yield (name, payload) for each box in buf."""
+        i = 0
+        n = len(buf)
+        while i + 8 <= n:
+            size = struct.unpack(">I", buf[i : i + 4])[0]
+            name = buf[i + 4 : i + 8]
+            if size == 1:
+                # 64-bit extended size
+                if i + 16 > n:
+                    break
+                size = struct.unpack(">Q", buf[i + 8 : i + 16])[0]
+                payload = buf[i + 16 : i + size]
+            elif size == 0:
+                # Box extends to end of file
+                payload = buf[i + 8 :]
+                yield name, payload
+                break
+            elif size < 8:
+                break
+            else:
+                payload = buf[i + 8 : i + size]
+            yield name, payload
+            i += size
+
+    for name, payload in _read_boxes(data):
+        if name == b"moov":
+            for sub_name, sub_payload in _read_boxes(payload):
+                if sub_name == b"mvhd":
+                    if len(sub_payload) < 4:
+                        return None
+                    version = sub_payload[0]
+                    if version == 1 and len(sub_payload) >= 32:
+                        timescale = struct.unpack(">I", sub_payload[20:24])[0]
+                        duration = struct.unpack(">Q", sub_payload[24:32])[0]
+                    elif version == 0 and len(sub_payload) >= 20:
+                        timescale = struct.unpack(">I", sub_payload[12:16])[0]
+                        duration = struct.unpack(">I", sub_payload[16:20])[0]
+                    else:
+                        return None
+                    if timescale > 0:
+                        return duration / timescale
+    return None
+
+
 def _get_duration(audio_bytes: bytes, filename: str = "") -> float:
     """
     Compute audio duration in seconds.
@@ -127,21 +182,13 @@ def _get_duration(audio_bytes: bytes, filename: str = "") -> float:
         except Exception:
             pass
 
-    # M4A / MP4 / AAC — mutagen.mp4.MP4 fails with raw BytesIO (no name attr).
-    # Write to a temp file with the correct extension so mutagen can parse it reliably.
-    if ext in ("m4a", "m4b", "mp4", "aac"):
-        fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}")
-        try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(audio_bytes)
-            return float(mutagen.mp4.MP4(tmp_path).info.length)
-        except Exception:
-            pass
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+    # M4A / MP4 / AAC — parse the ISOBMFF box structure in pure Python.
+    # mutagen.mp4.MP4 and BytesIO don't mix reliably; the custom parser reads
+    # the mvhd box directly from the raw bytes — no temp files, no ffmpeg.
+    if ext in ("m4a", "m4b", "mp4", "aac") or audio_bytes[4:8] in (b"ftyp", b"moov"):
+        result = _m4a_duration(audio_bytes)
+        if result is not None:
+            return result
 
     # OGG
     if ext == "ogg":
