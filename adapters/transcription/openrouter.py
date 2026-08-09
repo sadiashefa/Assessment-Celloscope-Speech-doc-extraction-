@@ -31,45 +31,50 @@ You are a precise audio transcription engine.
 Your only job is to listen to audio and return a JSON object — no markdown, \
 no explanation, nothing else.
 
+CRITICAL RULE — check this FIRST before anything else:
+If the audio contains ONLY silence, background noise, static, hiss, music, \
+ambient sounds, or any non-human-speech content, you MUST return:
+{"transcript": "", "detected_language": null, "is_speech_detected": false}
+Do NOT transcribe noise, music, or silence as words. Do NOT hallucinate words \
+that are not present in the audio.
+
+Only if there is clear, intelligible human speech in the audio, transcribe it.
+
 Output schema (return exactly this, no extra keys):
 {
-  "transcript": "<the exact spoken words verbatim>",
-  "detected_language": "<ISO 639-1 code, e.g. en or bn, or null if no speech>",
+  "transcript": "<the exact spoken words verbatim, empty string if no speech>",
+  "detected_language": "<ISO 639-1 code e.g. en or bn, or null if no speech>",
   "is_speech_detected": <true or false>
 }
 
-Rules:
-- transcript must contain the exact words spoken. Do not paraphrase or summarise.
-- If the audio is silence, white noise, background noise, music, or static with \
-no intelligible human speech: set is_speech_detected to false, transcript to "", \
-and detected_language to null.
-- detected_language must be the ISO 639-1 code of the language actually spoken \
-(not the language requested by the user).
+Additional rules:
+- transcript must contain the exact words spoken — do not paraphrase or summarise.
 - For Bengali audio, transcribe in Bengali Unicode script (e.g. রোগীর হিমোগ্লোবিন...).
 - For English audio, transcribe in English.
-- Never guess words you cannot hear. If a word is inaudible, omit it rather than guess.
+- Never guess words you cannot hear. If a word is inaudible, omit it.
+- detected_language is the language actually spoken, not the language requested.
 """
 
 
 def _language_instruction(language: str) -> str:
-    """Return a user-facing language hint to prepend to the transcription request."""
+    """Return a language hint that explicitly defers to the silence rule."""
     if language == "bn":
         return (
-            "Language hint: the speaker is using Bengali (বাংলা). "
-            "Transcribe every word in Bengali Unicode script. "
-            "If there is no speech, return is_speech_detected as false."
+            "Language hint (only applies if speech is present): "
+            "the speaker is using Bengali (বাংলা). "
+            "If there IS speech, transcribe every word in Bengali Unicode script. "
+            "If there is NO speech (silence/noise), still return is_speech_detected=false."
         )
     if language == "en":
         return (
-            "Language hint: the speaker is using English. "
-            "Transcribe every word in English. "
-            "If there is no speech, return is_speech_detected as false."
+            "Language hint (only applies if speech is present): "
+            "the speaker is using English. "
+            "If there IS speech, transcribe in English. "
+            "If there is NO speech (silence/noise), still return is_speech_detected=false."
         )
-    # auto
     return (
-        "Language hint: detect the language automatically from the audio. "
-        "If there is no intelligible speech (silence, noise, music), "
-        "return is_speech_detected as false."
+        "Language hint: detect the language automatically from the audio content. "
+        "If there is no intelligible speech, return is_speech_detected=false."
     )
 
 

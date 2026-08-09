@@ -6,6 +6,8 @@ They do not call any external service.
 """
 
 import io
+import math
+import struct
 import wave
 
 import pytest
@@ -16,13 +18,29 @@ from api.dependencies import get_transcription_adapter
 from adapters.transcription.mock import MockTranscriptionAdapter
 
 
-def _make_wav_bytes() -> bytes:
+def _make_wav_bytes(silent: bool = False) -> bytes:
+    """
+    Generate a minimal valid WAV file.
+    silent=False  → 440 Hz sine tone (non-zero RMS, passes silence pre-check)
+    silent=True   → pure zeros (triggers silence pre-check in service)
+    """
+    sample_rate = 8000
+    n_samples = sample_rate  # 1 second
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
-        wf.setframerate(8000)
-        wf.writeframes(b"\x00\x00" * 8000)
+        wf.setframerate(sample_rate)
+        if silent:
+            frames = b"\x00\x00" * n_samples
+        else:
+            # 440 Hz sine wave at ~50% amplitude — clearly non-silent
+            frames = struct.pack(
+                f"<{n_samples}h",
+                *[int(16000 * math.sin(2 * math.pi * 440 * i / sample_rate))
+                  for i in range(n_samples)],
+            )
+        wf.writeframes(frames)
     return buf.getvalue()
 
 
@@ -36,7 +54,7 @@ def client():
 
 
 def test_transcribe_english_happy_path(client):
-    wav = _make_wav_bytes()
+    wav = _make_wav_bytes(silent=False)  # sine tone — must pass silence pre-check
     response = client.post(
         "/api/v1/transcribe",
         data={"language": "en"},
@@ -52,7 +70,7 @@ def test_transcribe_english_happy_path(client):
 
 
 def test_transcribe_bengali_returns_bn_language(client):
-    wav = _make_wav_bytes()
+    wav = _make_wav_bytes(silent=False)
     response = client.post(
         "/api/v1/transcribe",
         data={"language": "bn"},
@@ -65,7 +83,7 @@ def test_transcribe_bengali_returns_bn_language(client):
 
 
 def test_transcribe_silence_returns_no_speech(client):
-    wav = _make_wav_bytes()
+    wav = _make_wav_bytes(silent=True)  # pure zeros — triggers local silence pre-check
     response = client.post(
         "/api/v1/transcribe",
         data={"language": "en"},
@@ -78,7 +96,7 @@ def test_transcribe_silence_returns_no_speech(client):
 
 
 def test_transcribe_invalid_language_returns_422(client):
-    wav = _make_wav_bytes()
+    wav = _make_wav_bytes(silent=False)
     response = client.post(
         "/api/v1/transcribe",
         data={"language": "fr"},
@@ -90,7 +108,7 @@ def test_transcribe_invalid_language_returns_422(client):
 
 
 def test_transcribe_missing_language_returns_422(client):
-    wav = _make_wav_bytes()
+    wav = _make_wav_bytes(silent=False)
     response = client.post(
         "/api/v1/transcribe",
         files={"file": ("test.wav", wav, "audio/wav")},
