@@ -54,10 +54,14 @@ The final approach uses a format-specific dispatch:
 
 ---
 
-## 5. Local RMS silence pre-check before LLM call for WAV files
+## 5. Two-layer silence detection: local RMS pre-check + prompt chain-of-thought
 
-**Chose**: Compute RMS amplitude from WAV bytes in the service layer; skip the API call if RMS < 50
-**Rejected**: Relying solely on the LLM prompt to detect silence
+**Chose**: (a) RMS amplitude check on WAV bytes before any API call; (b) a structured prompt with a mandatory `heard` field that forces the model to describe audio content before deciding `is_speech_detected`
+**Rejected**: Relying on a single instruction in the system prompt; VAD (Voice Activity Detection) libraries
 
-During testing, Gemini 2.5 Flash hallucinated Bengali text when given a silent WAV file and `language=bn` as a hint. The language instruction overrode the silence-detection rule despite strong prompt wording. A local energy check is deterministic and costs nothing — a silent WAV (RMS ≈ 0) is caught before any network call is made, and the response is returned in milliseconds. Non-WAV silence (MP3, M4A) still reaches the model, where the prompt handles it reliably since those formats are less trivially "all zeros".
+**Layer 1 — local RMS pre-check (WAV only):** During testing, Gemini 2.5 Flash hallucinated Bengali text when given a silent WAV file with `language=bn` as a hint — the language instruction overrode the silence rule. A local energy check on WAV bytes (RMS < 50 → silence) is deterministic and costs nothing: the response is returned in milliseconds with no API call. This covers the common case of programmatically generated silence files.
+
+**Layer 2 — prompt chain-of-thought (all formats):** For non-WAV silence (MP3, M4A from phones), the audio reaches the model. A simple imperative rule (“return false for silence”) proved insufficient — the model ignored it when a language hint was present. The redesigned prompt adds a `heard` field to the required JSON output: the model must first describe what it actually hears (e.g. `"silence with faint background hiss"`) before setting `is_speech_detected`. This chain-of-thought step prevents logical inconsistency — if `heard` describes silence, the model cannot justify `is_speech_detected: true` without contradicting itself. An explicit tie-breaking rule (`When in doubt → false`) further biases output toward caution over hallucination.
+
+VAD libraries (e.g. Silero VAD, WebRTC VAD) were considered but rejected: they add non-trivial dependencies, require model downloads or native binaries, and would block the clean-clone `docker compose up` requirement.
 

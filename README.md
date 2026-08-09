@@ -47,7 +47,9 @@ docker compose up
 | `file` | multipart | Audio file (mp3, wav, ogg, flac, m4a, webm — max 25 MB) |
 | `language` | form | **Optional.** `bn`, `en`, or `auto`. Default: `auto`. Model always auto-detects regardless; this is a transcription hint only. |
 
-**Silence pre-check (WAV files):** If the audio RMS energy is below threshold, the endpoint returns `is_speech_detected: false` immediately without an API call — prevents LLM hallucination on silent files.
+**Silence handling (two layers):**
+- **WAV files:** RMS energy check runs locally before any API call. If RMS < 50 (pure silence), returns `is_speech_detected: false` instantly with no network request.
+- **All formats:** The model prompt uses a mandatory `heard` field (chain-of-thought) — the model must first describe what it hears before setting `is_speech_detected`. This prevents hallucination when a language hint is present. Rule: *"if in doubt → false"*.
 
 **Response**
 ```json
