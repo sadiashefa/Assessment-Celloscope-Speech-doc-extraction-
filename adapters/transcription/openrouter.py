@@ -247,7 +247,7 @@ class GeminiTranscriptionAdapter:
 
         payload = {
             "model": self._model,
-            "temperature": 0,  # deterministic — we want exact transcription
+            "temperature": 0,  # deterministic
             "messages": [
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {
@@ -261,13 +261,14 @@ class GeminiTranscriptionAdapter:
                                 "format": ext,
                             },
                         },
-                        # Language hint + task instruction
+                        # NO language hint here — language hints caused the model to
+                        # hallucinate Bengali text on silent audio even when the system
+                        # prompt explicitly prohibited it. The model detects language
+                        # natively and reliably; the user-supplied 'language' param is
+                        # used only as a fallback for detected_language in the response.
                         {
                             "type": "text",
-                            "text": (
-                                f"{_language_instruction(language)}\n\n"
-                                "Now transcribe the audio and return the JSON object."
-                            ),
+                            "text": "Transcribe the audio following the rules above.",
                         },
                     ],
                 },
