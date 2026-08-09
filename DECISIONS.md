@@ -39,14 +39,18 @@ The httpx calls are a single POST with multipart or JSON body, so the SDK adds n
 
 ---
 
-## 4. mutagen + stdlib wave over pydub for audio duration
+## 4. Pure Python ISOBMFF box parser for M4A duration over pydub/ffmpeg
 
-**Chose**: `mutagen` + Python `wave` stdlib for format detection and duration
-**Rejected**: `pydub` (wraps ffmpeg)
+**Chose**: Custom ISOBMFF box parser using Python `struct` stdlib; `wave` stdlib for WAV; `mutagen.mp3.MP3` for MP3
+**Rejected**: `pydub` (wraps ffmpeg), `mutagen.mp4.MP4` for BytesIO input
 
-pydub requires ffmpeg as a system binary, adding ~30–60 MB to the Docker image and a system-level install step. mutagen is pure Python and covers all supported formats. A notable implementation detail: `mutagen.mp4.MP4` fails when passed a raw `BytesIO` object (no `.name` attribute), so M4A/MP4 files are written to a temporary file before parsing — a stdlib-only workaround that avoids adding ffmpeg.
+pydub requires ffmpeg as a system binary, adding ~30–60 MB to the Docker image and a system-level install step. mutagen is pure Python and covers most formats, but `mutagen.mp4.MP4` raises `MP4StreamInfoError` when passed a raw `BytesIO` object because the parser expects a file-like object with a `.name` attribute — a limitation confirmed in testing.
 
-WAV duration is handled by Python's built-in `wave` module (zero dependencies), and MP3 by `mutagen.mp3.MP3`. The format-specific dispatch ensures each format uses the most reliable reader available.
+The final approach uses a format-specific dispatch:
+- **WAV** → Python `wave` stdlib (parses frame count ÷ sample rate; zero external deps)
+- **MP3** → `mutagen.mp3.MP3(BytesIO(...))` (reliable for CBR/VBR)
+- **M4A/MP4/AAC** → custom pure-Python reader that walks ISO Base Media File Format (ISOBMFF) boxes, locates the `moov/mvhd` atom, and reads `timescale` + `duration` directly using `struct.unpack`. No temp files, no ffmpeg, works regardless of whether the `moov` atom is at the start or end of the file.
+- **Other formats** → `mutagen.File` sniffing fallback
 
 ---
 

@@ -23,9 +23,16 @@ The service starts on `http://localhost:8000`. Both endpoints respond immediatel
 ```bash
 cp .env.example .env
 # Edit .env — only ONE key needed for both endpoints:
-#   TRANSCRIPTION_PROVIDER=openrouter
+#
+#   TRANSCRIPTION_PROVIDER=openrouter      # or: groq | openai
 #   DOCUMENT_PROVIDER=openrouter
+#
 #   OPENROUTER_API_KEY=<your key from openrouter.ai>
+#   GROQ_API_KEY=                          # only needed if TRANSCRIPTION_PROVIDER=groq
+#
+#   OPENROUTER_TRANSCRIPTION_MODEL=google/gemini-2.5-flash   # model for /transcribe
+#   OPENROUTER_MODEL=google/gemma-4-31b-it                   # model for /documents/extract
+#
 docker compose up
 ```
 
