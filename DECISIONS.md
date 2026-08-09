@@ -21,8 +21,8 @@ Self-hosting was not an option here because downloading a 1.5-3 GB Whisper model
 
 ## 2. OpenRouter + Gemma 4 31B IT for document extraction instead of Tesseract OCR
 
-**Picked**: OpenRouter vision model (`google/gemma-4-31b-it`) via chat/completions
-**Not picked**: Tesseract OCR with a regex/heuristic parsing pipeline; smaller vision models
+**Picked**: OpenRouter vision model (`google/gemini-2.5-flash`) via chat/completions
+**Not picked**: Tesseract OCR with a regex/heuristic parsing pipeline; Gemma 4 31B IT
 
 Tesseract works reasonably on flat, well-lit scans but starts failing badly on angled photos and dim lighting, which are exactly what the brief describes as expected inputs. Building a pipeline to deskew, denoise, and binarise images before feeding them to Tesseract is a lot of work and still breaks on difficult inputs.
 
@@ -85,14 +85,14 @@ The self-hosted option was rejected for the same reason as before: a 1.5–3 GB 
 
 ---
 
-## 2. OpenRouter + Gemma 4 31B IT for document extraction over Tesseract OCR
+## 2. OpenRouter + Gemini 2.5 Flash for document extraction over Tesseract OCR
 
-**Chose**: OpenRouter vision model (`google/gemma-4-31b-it`) via chat/completions
-**Rejected**: Tesseract OCR + regex/heuristic parsing pipeline; smaller vision models
+**Picked**: OpenRouter vision model (`google/gemini-2.5-flash`) via chat/completions
+**Not picked**: Tesseract OCR + regex/heuristic parsing pipeline; Gemma 4 31B IT
 
 Tesseract degrades significantly on angled photographs and poor lighting — exactly the conditions the brief describes. A robust Tesseract pipeline would require deskew, denoise, and binarise preprocessing, adding substantial complexity that still fails on heavily degraded inputs.
 
-Gemma 4 31B IT is a large multimodal model that handles all these conditions natively and returns structured JSON from a single prompt. A smaller model (`gemini-flash`) was initially used but swapped to Gemma 4 31B for better extraction accuracy on complex lab report layouts with merged cells, variable column widths, and low-contrast printing.
+Gemini 2.5 Flash handles angled and dark photos without any preprocessing and returns structured JSON from a single prompt. Both transcription and extraction now use the same model, which keeps the setup simple — the reviewer only needs one model name. Gemma 4 31B IT was tried during development but swapped back to Gemini 2.5 Flash for consistency.
 
 ---
 

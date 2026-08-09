@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     TRANSCRIPTION_PROVIDER_MODEL: str = "google/gemini-2.5-flash"
 
     # Model used for POST /api/v1/documents/extract
-    DOCUMENT_EXTRACTION_PROVIDER_MODEL: str = "google/gemma-4-31b-it"
+    DOCUMENT_EXTRACTION_PROVIDER_MODEL: str = "google/gemini-2.5-flash"
 
     # Limits
     MAX_AUDIO_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB

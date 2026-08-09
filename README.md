@@ -2,7 +2,7 @@
 
 A FastAPI service with two endpoints:
 - **Transcribe** audio in Bengali, English, or any language (OpenRouter + Gemini 2.5 Flash)
-- **Extract lab report data** from photographs of medical reports (OpenRouter + Gemma 4 31B IT)
+- **Extract lab report data** from photographs of medical reports (OpenRouter + Gemini 2.5 Flash)
 
 Both endpoints use a single `OPENROUTER_API_KEY`.
 
@@ -29,7 +29,7 @@ cp .env.example .env
 #   OPENROUTER_API_KEY=<your key from openrouter.ai>
 #
 #   TRANSCRIPTION_PROVIDER_MODEL=google/gemini-2.5-flash   # for /transcribe
-#   DOCUMENT_EXTRACTION_PROVIDER_MODEL=google/gemma-4-31b-it   # for /documents/extract
+#   DOCUMENT_EXTRACTION_PROVIDER_MODEL=google/gemini-2.5-flash   # for /documents/extract
 #
 docker compose up
 ```
@@ -119,7 +119,7 @@ adapters/     All external API calls live here, nowhere else
   - transcription/groq.py: Groq Whisper (alternative)
   - transcription/openai.py: OpenAI Whisper (alternative)
   - documents/mock.py: reads from fixtures/ (default, no credentials)
-  - documents/openrouter.py: OpenRouter + Gemma 4 31B IT
+  - documents/openrouter.py: OpenRouter + Gemini 2.5 Flash
 ```
 
 Layer separation is checked by `tests/unit/test_layer_separation.py`, which reads source files and fails if FastAPI types appear in `services/` or provider imports appear in `api/`.
